@@ -11,6 +11,7 @@ const navItems = [
   { label: "Alerts", icon: "🔔", path: "/dashboard/alerts" },
   { label: "Settings", icon: "⚙️", path: "/dashboard/settings" },
   { label: "Register Complaint", icon: "⚙️", path: "/dashboard/complaint" },
+  { label: "Logout", icon: "⚙️", path: "/dashboard/logout" },
 ];
 
 const DashboardLayout = () => {

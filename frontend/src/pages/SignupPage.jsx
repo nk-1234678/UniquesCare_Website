@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 
 function SignUp() {
   const navigate = useNavigate();
+  const { setUser } = useOutletContext();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -42,11 +43,8 @@ function SignUp() {
 
       if (res.ok) {
         alert("Registered Successfully ✅");
-
-        console.log("User:", data.user);
-
-        // Redirect after success
-        navigate("/");
+        setUser(data.user);
+        navigate("/login");
       } else {
         alert(data.message || "Registration failed");
       }

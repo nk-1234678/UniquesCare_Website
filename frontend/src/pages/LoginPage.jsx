@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { setUser } = useOutletContext();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,6 +41,7 @@ const LoginPage = () => {
         alert("Logged In Successfully ✅");
 
         console.log("User:", data.user);
+        setUser(data.user);
 
         // Redirect after success
         navigate("/");
@@ -112,7 +114,7 @@ const LoginPage = () => {
         <p className="text-center text-sm text-gray-600 mt-6">
           Don't have an account?
           <a
-            href="/signup"
+            href="/register"
             className="ml-1 text-red-600 font-semibold hover:underline"
           >
             Sign Up

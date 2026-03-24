@@ -1,5 +1,7 @@
 import { registerUser } from "../services/authService.js";
 import { loginUser } from "../services/authService.js";
+import jwt from "jsonwebtoken";
+import User from "../modals/User.js";
 
 export const register = async (req, res, next) => {
   try {
@@ -85,4 +87,30 @@ export const logout = (req, res) => {
     sameSite: "strict"
   });
   res.status(200).json({ message: "Logged out successfully" });
+};
+
+export const getMe = async (req, res) => {
+  try {
+    const cookieHeader = req.headers.cookie || "";
+    const token = cookieHeader
+      .split(";")
+      .map((item) => item.trim())
+      .find((item) => item.startsWith("token="))
+      ?.split("=")[1];
+
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 };
