@@ -1,371 +1,519 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { authApi } from "../../api/authApi";
+import { getErrorMessage } from "../../api/httpClient";
+import { useAuth } from "../../context/AuthContext";
 
-// ─── Mock Initial Data ─────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const ACADEMIC_START_YEARS = ["2021", "2022", "2023", "2024", "2025"];
+const ACADEMIC_END_YEARS   = ["2023", "2024", "2025", "2026", "2027"];
 
 const initialProfile = {
-  name: "Arjun Sharma",
-  rollNo: "21CSE104",
-  email: "arjun.sharma@university.edu",
-  phone: "+91 98765 43210",
-  dob: "2003-08-15",
-  gender: "Male",
-  bloodGroup: "B+",
-  nationality: "Indian",
-  // Academic
-  department: "Computer Science & Engineering",
-  program: "B.Tech",
-  semester: "6th",
-  section: "A",
-  batch: "2021 – 2025",
-  advisor: "Dr. Priya Mehta",
-  cgpa: "8.74",
-  // Address
-  hostel: "Block C – Room 214",
-  hometown: "Ludhiana, Punjab",
-  pincode: "141001",
-  // Emergency
-  guardianName: "Rajesh Sharma",
-  guardianPhone: "+91 94110 22233",
-  guardianRelation: "Father",
+  name:               "",
+  email:              "",
+  role:               "Student",
+  department:         "",
+  phone:              "",
+  profilePhoto:       "",
+  academicStartYear:  "",
+  academicEndYear:    "",
 };
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const Field = ({ label, value, editing, name, onChange, type = "text", options }) => (
-  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-    <label style={{ fontSize: 11, fontWeight: 700, color: "#aaa", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-      {label}
-    </label>
-    {editing ? (
-      options ? (
-        <select name={name} value={value} onChange={onChange} style={inputStyle}>
-          {options.map(o => <option key={o}>{o}</option>)}
-        </select>
-      ) : (
-        <input type={type} name={name} value={value} onChange={onChange} style={inputStyle} />
-      )
+/**
+ * Normalise a raw user object (from API or AuthContext) into the local profile
+ * shape. Uses nullish coalescing (??) so that legitimate empty strings from the
+ * API are preserved rather than being replaced by the fallback value.
+ */
+const normaliseUser = (user, fallback = initialProfile) => ({
+  ...initialProfile,
+  name:  user?.name  ?? fallback.name,
+  email: user?.email ?? fallback.email,
+  role: user?.role
+    ? String(user.role).charAt(0).toUpperCase() + String(user.role).slice(1)
+    : fallback.role,
+  department:        user?.department        ?? fallback.department,
+  phone:             user?.phone             ?? fallback.phone,
+  profilePhoto:      user?.profilePhoto      ?? fallback.profilePhoto,
+  academicStartYear: user?.academicStartYear ?? fallback.academicStartYear,
+  academicEndYear:   user?.academicEndYear   ?? fallback.academicEndYear,
+});
+
+const optimizeImageToDataUrl = (file, maxSize = 1024, quality = 0.75) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale  = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const width  = Math.max(1, Math.round(img.width  * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width  = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Failed to get canvas context.")); return; }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Invalid image file."));
+      img.src = typeof reader.result === "string" ? reader.result : "";
+    };
+    reader.onerror = () => reject(new Error("Failed to read file."));
+    reader.readAsDataURL(file);
+  });
+
+// ─── Shared styles ────────────────────────────────────────────────────────────
+
+const inputStyle = {
+  padding:    "10px 12px",
+  borderRadius: 10,
+  border:     "1px solid #E5E5E5",
+  fontSize:   14,
+  width:      "100%",
+  boxSizing:  "border-box",
+  outline:    "none",
+  background: "#fff",
+  color:      "#1A1A1A",
+  fontFamily: "inherit",
+};
+
+const labelStyle = {
+  fontSize:      12,
+  color:         "#777",
+  fontWeight:    700,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
+
+const readonlyValueStyle = (readOnly) => ({
+  border:       "1px solid #F0F0F0",
+  borderRadius: 10,
+  padding:      "10px 12px",
+  background:   readOnly ? "#FAFAFA" : "#fff",
+  color:        "#222",
+  fontSize:     14,
+  minHeight:    40,
+});
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+const Field = ({
+  label,
+  value,
+  editing,
+  name,
+  onChange,
+  readOnly = false,
+  type = "text",
+}) => (
+  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <label style={labelStyle}>{label}</label>
+    {editing && !readOnly ? (
+      <input
+        type={type}
+        name={name}
+        value={value ?? ""}
+        onChange={onChange}
+        style={inputStyle}
+        autoComplete="off"
+      />
     ) : (
-      <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#222", padding: "9px 0" }}>{value || "—"}</p>
+      <div style={readonlyValueStyle(readOnly)}>{value || "-"}</div>
     )}
   </div>
 );
 
-const inputStyle = {
-  padding: "9px 14px",
-  borderRadius: 10,
-  border: "1.5px solid #E5E5E5",
-  fontSize: 14,
-  color: "#222",
-  background: "#FAFAFA",
-  outline: "none",
-  fontFamily: "inherit",
-  transition: "border 0.2s",
-};
-
-const SectionCard = ({ title, icon, children }) => (
-  <div style={{
-    background: "#fff",
-    borderRadius: 18,
-    padding: "28px 28px",
-    border: "1px solid #F0F0F0",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-    animation: "fadeUp 0.5s ease both",
-  }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
-      <span style={{
-        width: 36, height: 36, borderRadius: 10,
-        background: "#FFF0F1", display: "flex",
-        alignItems: "center", justifyContent: "center", fontSize: 18
-      }}>{icon}</span>
-      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#111" }}>{title}</h3>
-    </div>
-    {children}
+const SelectField = ({ label, name, value, onChange, options }) => (
+  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <label style={labelStyle}>{label}</label>
+    <select
+      name={name}
+      value={value ?? ""}
+      onChange={onChange}
+      style={{ ...inputStyle, appearance: "auto", cursor: "pointer" }}
+    >
+      <option value="">Select</option>
+      {options.map((opt) => (
+        <option key={opt} value={opt}>{opt}</option>
+      ))}
+    </select>
   </div>
 );
 
-const Grid = ({ children, cols = 2 }) => (
-  <div style={{
-    display: "grid",
-    gridTemplateColumns: `repeat(${cols}, 1fr)`,
-    gap: "18px 28px"
-  }}>
-    {children}
-  </div>
-);
-
-// ─── Badge ─────────────────────────────────────────────────────────────────────
-
-const Badge = ({ label, color = "#C0272D", bg = "#FFF0F1" }) => (
-  <span style={{
-    fontSize: 11, fontWeight: 700, padding: "4px 12px",
-    borderRadius: 99, background: bg, color, letterSpacing: "0.05em"
-  }}>{label}</span>
-);
-
-// ─── Main Component ────────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const ProfilePage = () => {
-  const [profile, setProfile] = useState(initialProfile);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(initialProfile);
-  const [avatar, setAvatar] = useState(null);
-  const [activeTab, setActiveTab] = useState("personal");
-  const [saved, setSaved] = useState(false);
-  const fileRef = useRef();
+  const { user, refreshUser } = useAuth();
 
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
-    if (file) setAvatar(URL.createObjectURL(file));
+  const [editing,        setEditing]        = useState(false);
+  const [profile,        setProfile]        = useState(initialProfile);
+  const [draft,          setDraft]          = useState(initialProfile);
+  const [saved,          setSaved]          = useState(false);
+  const [saving,         setSaving]         = useState(false);
+  const [photoProcessing,setPhotoProcessing]= useState(false);
+  const [error,          setError]          = useState("");
+
+  const fileRef     = useRef(null);
+  /**
+   * Guard flag: prevents the AuthContext useEffect from overwriting locally
+   * committed state while a save is in flight (or just after refreshUser runs).
+   */
+  const isSavingRef = useRef(false);
+
+  // ── Seed from AuthContext whenever user changes (but not during a save) ──
+  useEffect(() => {
+    if (isSavingRef.current) return;
+    if (user) {
+      const fromContext = normaliseUser(user);
+      setProfile(fromContext);
+      setDraft(fromContext);
+    }
+  }, [user]);
+
+  // ── Hydrate from API on mount for the most up-to-date data ──────────────
+  useEffect(() => {
+    let cancelled = false;
+    const hydrateProfile = async () => {
+      try {
+        const data    = await authApi.getCurrentUser();
+        const fromApi = normaliseUser(data?.user);
+        if (!cancelled) {
+          setProfile(fromApi);
+          setDraft(fromApi);
+        }
+      } catch {
+        // Keep existing values silently; non-critical failure.
+      }
+    };
+    hydrateProfile();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── Derived ──────────────────────────────────────────────────────────────
+  const role      = useMemo(() => String(user?.role || "student").toLowerCase(), [user]);
+  const isStudent = role === "student";
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+
+  const onChange = (e) => {
+    const { name, value } = e.target;
+    setDraft((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleChange = (e) => {
-    setDraft(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const onSave = async () => {
+    try {
+      isSavingRef.current = true;
+      setSaving(true);
+      setError("");
+
+      // Always send every editable field unconditionally so that clearing a
+      // value (e.g. emptying phone) is persisted rather than silently skipped.
+      const payload = {
+        name:       draft.name,
+        email:      draft.email,
+        department: draft.department,
+        phone:      draft.phone,
+      };
+
+      // Academic year — students only; guards against accidentally clearing
+      // data on technician profiles that share the same endpoint.
+      if (isStudent) {
+        payload.academicStartYear = draft.academicStartYear;
+        payload.academicEndYear   = draft.academicEndYear;
+      }
+
+      // Never overwrite a stored photo with an empty string.
+      if (typeof draft.profilePhoto === "string" && draft.profilePhoto.trim().length > 0) {
+        payload.profilePhoto = draft.profilePhoto;
+      }
+
+      const data    = await authApi.updateProfile(payload);
+      const updated = normaliseUser(data?.user, draft);
+
+      setProfile(updated);
+      setDraft(updated);
+      setEditing(false);
+      setSaved(true);
+
+      // refreshUser updates AuthContext; isSavingRef blocks the useEffect
+      // above from overwriting the fresh state we just committed.
+      await refreshUser({ force: true });
+      isSavingRef.current = false;
+
+      setTimeout(() => setSaved(false), 1600);
+    } catch (err) {
+      isSavingRef.current = false;
+      setError(getErrorMessage(err, "Failed to save profile. Please try again."));
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSave = () => {
-    setProfile(draft);
-    setEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  };
-
-  const handleCancel = () => {
+  const onCancel = () => {
     setDraft(profile);
     setEditing(false);
+    setError("");
   };
 
-  const tabs = [
-    { key: "personal",     label: "Personal",   icon: "👤" },
-    { key: "academic",     label: "Academic",   icon: "🎓" },
-    { key: "address",      label: "Address",    icon: "📍" },
-    { key: "emergency",    label: "Emergency",  icon: "🚨" },
-  ];
+  const onPhotoPick = async (e) => {
+    const file = e.target.files?.[0];
+    // Reset so the same file can be re-selected after a cancel.
+    e.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image file.");
+      return;
+    }
+
+    setPhotoProcessing(true);
+    setError("");
+
+    try {
+      const dataUrl = await optimizeImageToDataUrl(file, 1024, 0.75);
+      setDraft((prev)    => ({ ...prev, profilePhoto: dataUrl }));
+      setProfile((prev)  => ({ ...prev, profilePhoto: dataUrl }));
+    } catch {
+      setError("Failed to process the selected photo.");
+    } finally {
+      setPhotoProcessing(false);
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  const displayPhoto = draft.profilePhoto || profile.profilePhoto;
 
   return (
     <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", color: "#1A1A1A" }}>
 
-      <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        input:focus, select:focus { border-color: #C0272D !important; background: #fff !important; }
-        .tab-btn:hover { background: #FFF0F1 !important; color: #C0272D !important; }
-      `}</style>
+      {/* ── Header banner ── */}
+      <div
+        style={{
+          background:    "linear-gradient(130deg, #C0272D 0%, #7A1519 100%)",
+          borderRadius:  20,
+          padding:       "28px 32px",
+          marginBottom:  22,
+          display:       "flex",
+          alignItems:    "center",
+          justifyContent:"space-between",
+          gap:           16,
+          flexWrap:      "wrap",
+        }}
+      >
+        <div>
+          <p style={{ margin: 0, fontSize: 12, opacity: 0.8, color: "#fff", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {role === "technician" ? "Technician" : "Student"} Profile
+          </p>
+          <h2 style={{ margin: "6px 0 0", color: "#fff", fontSize: 26, fontWeight: 800 }}>
+            {profile.name || "—"}
+          </h2>
+        </div>
 
-      {/* ── Profile Hero Card ───────────────────────────────────────── */}
-      <div style={{
-        background: "linear-gradient(130deg, #C0272D 0%, #7A1519 100%)",
-        borderRadius: 20,
-        padding: "32px 36px",
-        marginBottom: 24,
-        display: "flex",
-        alignItems: "center",
-        gap: 28,
-        boxShadow: "0 4px 28px rgba(192,39,45,0.22)",
-        animation: "fadeUp 0.4s ease both",
-        flexWrap: "wrap"
-      }}>
-        {/* Avatar */}
-        <div style={{ position: "relative", flexShrink: 0 }}>
-          <div style={{
-            width: 96, height: 96, borderRadius: "50%",
-            border: "3px solid rgba(255,255,255,0.4)",
-            overflow: "hidden", background: "#fff",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            {avatar
-              ? <img src={avatar} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <span style={{ fontSize: 38 }}>🧑‍💻</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {saved && (
+            <span style={{ background: "#EDFAF3", color: "#166534", padding: "8px 12px", borderRadius: 10, fontSize: 12, fontWeight: 700 }}>
+              ✓ Saved
+            </span>
+          )}
+
+          {!editing ? (
+            <button
+              onClick={() => { setDraft(profile); setEditing(true); setError(""); }}
+              style={{ border: "1px solid #fff", color: "#fff", background: "transparent", borderRadius: 10, padding: "8px 18px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}
+            >
+              Edit Profile
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onCancel}
+                style={{ border: "1px solid #F1F1F1", color: "#333", background: "#fff", borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onSave}
+                disabled={saving || photoProcessing}
+                style={{
+                  border:        "none",
+                  color:         "#fff",
+                  background:    "#111",
+                  borderRadius:  10,
+                  padding:       "8px 18px",
+                  cursor:        saving || photoProcessing ? "not-allowed" : "pointer",
+                  opacity:       saving || photoProcessing ? 0.65 : 1,
+                  fontWeight:    700,
+                  fontSize:      13,
+                  transition:    "opacity 0.15s",
+                }}
+              >
+                {photoProcessing ? "Processing…" : saving ? "Saving…" : "Save Changes"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Error banner ── */}
+      {error && (
+        <div
+          role="alert"
+          style={{ marginBottom: 14, background: "#FFF0F0", color: "#B91C1C", border: "1px solid #FECACA", borderRadius: 12, padding: "10px 14px", fontSize: 13 }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* ── Profile card ── */}
+      <div
+        style={{
+          background:   "#fff",
+          border:       "1px solid #F0F0F0",
+          borderRadius: 16,
+          padding:      22,
+          boxShadow:    "0 1px 4px rgba(0,0,0,0.05)",
+          display:      "grid",
+          gridTemplateColumns: "120px 1fr",
+          gap:          20,
+        }}
+      >
+        {/* ── Avatar column ── */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+          <div
+            style={{
+              width:          96,
+              height:         96,
+              borderRadius:   "50%",
+              overflow:       "hidden",
+              background:     "#F5F5F5",
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "center",
+              fontSize:       38,
+              border:         "2px solid #EFEFEF",
+              flexShrink:     0,
+            }}
+          >
+            {displayPhoto
+              ? <img src={displayPhoto} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              : "👤"
             }
           </div>
-          {/* Upload button */}
+
           <button
-            onClick={() => fileRef.current.click()}
-            title="Upload photo"
+            onClick={() => editing && fileRef.current?.click()}
+            disabled={!editing || photoProcessing || saving}
             style={{
-              position: "absolute", bottom: 2, right: 2,
-              width: 28, height: 28, borderRadius: "50%",
-              background: "#fff", border: "2px solid #C0272D",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", fontSize: 13, boxShadow: "0 2px 6px rgba(0,0,0,0.12)"
-            }}>
-            📷
+              border:       "1px solid #E5E5E5",
+              background:   !editing ? "#F3F4F6" : "#fff",
+              color:        !editing ? "#9CA3AF" : "#111",
+              borderRadius: 8,
+              padding:      "6px 10px",
+              cursor:       !editing || photoProcessing || saving ? "not-allowed" : "pointer",
+              fontSize:     12,
+              fontWeight:   700,
+              transition:   "background 0.15s, color 0.15s",
+            }}
+          >
+            {photoProcessing ? "Processing…" : "Upload Photo"}
           </button>
-          <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: "none" }} />
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            onChange={onPhotoPick}
+            disabled={!editing}
+            style={{ display: "none" }}
+          />
         </div>
 
-        {/* Info */}
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "rgba(255,255,255,0.7)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-            Student Profile
-          </p>
-          <h2 style={{ margin: "0 0 6px", fontSize: 26, fontWeight: 800, color: "#fff" }}>
-            {profile.name}
-          </h2>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Badge label={profile.rollNo} color="#C0272D" bg="#fff" />
-            <Badge label={profile.department} color="#C0272D" bg="rgba(255,255,255,0.9)" />
-            <Badge label={`${profile.program} · ${profile.semester} Sem`} color="#7A1519" bg="rgba(255,255,255,0.85)" />
-          </div>
-        </div>
+        {/* ── Fields grid ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14 }}>
 
-        {/* CGPA Pill */}
-        <div style={{
-          background: "rgba(255,255,255,0.15)",
-          borderRadius: 16, padding: "16px 24px",
-          textAlign: "center", backdropFilter: "blur(4px)",
-          border: "1px solid rgba(255,255,255,0.2)"
-        }}>
-          <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.75)", textTransform: "uppercase", letterSpacing: "0.08em" }}>CGPA</p>
-          <p style={{ margin: "4px 0 0", fontSize: 28, fontWeight: 900, color: "#fff" }}>{profile.cgpa}</p>
-          <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(255,255,255,0.6)" }}>out of 10.0</p>
+          <Field
+            label="Full Name"
+            name="name"
+            value={editing ? draft.name : profile.name}
+            editing={editing}
+            onChange={onChange}
+          />
+
+          <Field
+            label="Email Address"
+            name="email"
+            value={editing ? draft.email : profile.email}
+            editing={editing}
+            onChange={onChange}
+            type="email"
+          />
+
+          <Field
+            label="Role"
+            name="role"
+            value={profile.role}
+            editing={false}
+            readOnly
+          />
+
+          <Field
+            label="Department"
+            name="department"
+            value={editing ? draft.department : profile.department}
+            editing={editing}
+            onChange={onChange}
+          />
+
+          <Field
+            label="Phone Number"
+            name="phone"
+            value={editing ? draft.phone : profile.phone}
+            editing={editing}
+            onChange={onChange}
+            type="tel"
+          />
+
+          {/* Academic year — students only */}
+          {isStudent && (
+            editing ? (
+              <>
+                <SelectField
+                  label="Start Year"
+                  name="academicStartYear"
+                  value={draft.academicStartYear}
+                  onChange={onChange}
+                  options={ACADEMIC_START_YEARS}
+                />
+                <SelectField
+                  label="End Year"
+                  name="academicEndYear"
+                  value={draft.academicEndYear}
+                  onChange={onChange}
+                  options={ACADEMIC_END_YEARS}
+                />
+              </>
+            ) : (
+              <Field
+                label="Academic Year"
+                value={
+                  profile.academicStartYear && profile.academicEndYear
+                    ? `${profile.academicStartYear} – ${profile.academicEndYear}`
+                    : ""
+                }
+                editing={false}
+                readOnly
+              />
+            )
+          )}
+
         </div>
       </div>
-
-      {/* ── Tabs + Edit Controls ────────────────────────────────────── */}
-      <div style={{
-        display: "flex", justifyContent: "space-between",
-        alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12
-      }}>
-        {/* Tabs */}
-        <div style={{
-          display: "flex", gap: 6,
-          background: "#fff", padding: 5, borderRadius: 12,
-          border: "1px solid #F0F0F0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
-        }}>
-          {tabs.map(t => (
-            <button key={t.key} className="tab-btn" onClick={() => setActiveTab(t.key)} style={{
-              padding: "8px 18px", borderRadius: 9, border: "none",
-              fontSize: 13, fontWeight: 600, cursor: "pointer",
-              background: activeTab === t.key ? "#C0272D" : "transparent",
-              color: activeTab === t.key ? "#fff" : "#666",
-              transition: "all 0.2s", display: "flex", alignItems: "center", gap: 6
-            }}>
-              <span>{t.icon}</span> {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Edit / Save / Cancel */}
-        <div style={{ display: "flex", gap: 10 }}>
-          {saved && (
-            <span style={{
-              fontSize: 13, fontWeight: 600, color: "#16A34A",
-              background: "#EDFAF3", padding: "8px 16px", borderRadius: 9
-            }}>✅ Saved!</span>
-          )}
-          {editing ? (
-            <>
-              <button onClick={handleCancel} style={{
-                padding: "9px 20px", borderRadius: 10, border: "1.5px solid #E5E5E5",
-                background: "#fff", color: "#555", fontSize: 13, fontWeight: 600, cursor: "pointer"
-              }}>Cancel</button>
-              <button onClick={handleSave} style={{
-                padding: "9px 22px", borderRadius: 10, border: "none",
-                background: "#C0272D", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                boxShadow: "0 2px 10px rgba(192,39,45,0.25)"
-              }}>Save Changes</button>
-            </>
-          ) : (
-            <button onClick={() => { setDraft(profile); setEditing(true); }} style={{
-              padding: "9px 22px", borderRadius: 10, border: "1.5px solid #C0272D",
-              background: "#fff", color: "#C0272D", fontSize: 13, fontWeight: 700, cursor: "pointer"
-            }}>✏️ Edit Profile</button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Tab Content ─────────────────────────────────────────────── */}
-
-      {activeTab === "personal" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <SectionCard title="Personal Information" icon="👤">
-            <Grid>
-              <Field label="Full Name"     name="name"        value={editing ? draft.name : profile.name}               editing={editing} onChange={handleChange} />
-              <Field label="Date of Birth" name="dob"         value={editing ? draft.dob : profile.dob}                 editing={editing} onChange={handleChange} type="date" />
-              <Field label="Gender"        name="gender"      value={editing ? draft.gender : profile.gender}           editing={editing} onChange={handleChange} options={["Male","Female","Other","Prefer not to say"]} />
-              <Field label="Blood Group"   name="bloodGroup"  value={editing ? draft.bloodGroup : profile.bloodGroup}   editing={editing} onChange={handleChange} options={["A+","A-","B+","B-","AB+","AB-","O+","O-"]} />
-              <Field label="Nationality"   name="nationality" value={editing ? draft.nationality : profile.nationality} editing={editing} onChange={handleChange} />
-            </Grid>
-          </SectionCard>
-
-          <SectionCard title="Contact Details" icon="📬">
-            <Grid>
-              <Field label="Email Address"   name="email" value={editing ? draft.email : profile.email} editing={editing} onChange={handleChange} type="email" />
-              <Field label="Phone Number"    name="phone" value={editing ? draft.phone : profile.phone} editing={editing} onChange={handleChange} />
-            </Grid>
-          </SectionCard>
-        </div>
-      )}
-
-      {activeTab === "academic" && (
-        <SectionCard title="Academic Information" icon="🎓">
-          <Grid>
-            <Field label="Roll Number"    name="rollNo"     value={editing ? draft.rollNo : profile.rollNo}         editing={editing} onChange={handleChange} />
-            <Field label="Department"     name="department" value={editing ? draft.department : profile.department} editing={editing} onChange={handleChange} />
-            <Field label="Program"        name="program"    value={editing ? draft.program : profile.program}       editing={editing} onChange={handleChange} options={["B.Tech","M.Tech","BCA","MCA","B.Sc","M.Sc","MBA"]} />
-            <Field label="Semester"       name="semester"   value={editing ? draft.semester : profile.semester}     editing={editing} onChange={handleChange} options={["1st","2nd","3rd","4th","5th","6th","7th","8th"]} />
-            <Field label="Section"        name="section"    value={editing ? draft.section : profile.section}       editing={editing} onChange={handleChange} options={["A","B","C","D"]} />
-            <Field label="Batch"          name="batch"      value={editing ? draft.batch : profile.batch}           editing={editing} onChange={handleChange} />
-            <Field label="Faculty Advisor" name="advisor"   value={editing ? draft.advisor : profile.advisor}       editing={editing} onChange={handleChange} />
-            <Field label="CGPA"           name="cgpa"       value={editing ? draft.cgpa : profile.cgpa}             editing={editing} onChange={handleChange} />
-          </Grid>
-
-          {/* CGPA Visual Bar */}
-          <div style={{ marginTop: 24, background: "#F9F9F9", borderRadius: 12, padding: "16px 20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#555" }}>CGPA Progress</span>
-              <span style={{ fontSize: 13, fontWeight: 800, color: "#C0272D" }}>{profile.cgpa} / 10.0</span>
-            </div>
-            <div style={{ height: 8, background: "#EEE", borderRadius: 99 }}>
-              <div style={{
-                height: "100%", borderRadius: 99,
-                background: "linear-gradient(90deg, #C0272D, #F59E0B)",
-                width: `${(parseFloat(profile.cgpa) / 10) * 100}%`,
-                transition: "width 0.5s ease"
-              }} />
-            </div>
-          </div>
-        </SectionCard>
-      )}
-
-      {activeTab === "address" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <SectionCard title="Campus Address" icon="🏫">
-            <Grid>
-              <Field label="Hostel / Block" name="hostel"   value={editing ? draft.hostel : profile.hostel}     editing={editing} onChange={handleChange} />
-              <Field label="Pincode"        name="pincode"  value={editing ? draft.pincode : profile.pincode}   editing={editing} onChange={handleChange} />
-            </Grid>
-          </SectionCard>
-
-          <SectionCard title="Hometown Address" icon="🏠">
-            <Grid>
-              <Field label="City / Town"  name="hometown" value={editing ? draft.hometown : profile.hometown} editing={editing} onChange={handleChange} />
-              <Field label="Pincode"      name="pincode"  value={editing ? draft.pincode : profile.pincode}   editing={editing} onChange={handleChange} />
-            </Grid>
-          </SectionCard>
-        </div>
-      )}
-
-      {activeTab === "emergency" && (
-        <SectionCard title="Emergency Contact" icon="🚨">
-          <div style={{
-            background: "#FFF8EB", border: "1px solid #FDE68A",
-            borderRadius: 12, padding: "12px 16px", marginBottom: 22,
-            fontSize: 13, color: "#92400E", display: "flex", gap: 8, alignItems: "flex-start"
-          }}>
-            <span>⚠️</span>
-            <span>This information is used only in case of emergency and is kept strictly confidential.</span>
-          </div>
-          <Grid>
-            <Field label="Guardian Name"     name="guardianName"     value={editing ? draft.guardianName : profile.guardianName}         editing={editing} onChange={handleChange} />
-            <Field label="Relationship"      name="guardianRelation" value={editing ? draft.guardianRelation : profile.guardianRelation}  editing={editing} onChange={handleChange} options={["Father","Mother","Sibling","Guardian","Other"]} />
-            <Field label="Guardian Phone"    name="guardianPhone"    value={editing ? draft.guardianPhone : profile.guardianPhone}        editing={editing} onChange={handleChange} />
-          </Grid>
-        </SectionCard>
-      )}
-
     </div>
   );
 };

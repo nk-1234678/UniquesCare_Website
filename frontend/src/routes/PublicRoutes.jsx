@@ -1,11 +1,13 @@
 // src/routes/PublicRoutes.jsx
-import React from "react";
+import React, { lazy } from "react";
 import PublicLayout from "../layouts/PublicLayout";
-import LandingPage from "../pages/LandingPage";
-import ContactPage from "../pages/ContactPage";
-import AboutPage from "../pages/AboutPage";
-import SignUp from "../pages/SignupPage";
-import LoginPage from "../pages/LoginPage";
+import NotFoundPage from "../pages/NotFoundPage";
+
+const LandingPage = lazy(() => import("../pages/LandingPage"));
+const ContactPage = lazy(() => import("../pages/ContactPage"));
+const AboutPage = lazy(() => import("../pages/AboutPage"));
+const SignUp = lazy(() => import("../pages/SignupPage"));
+const LoginPage = lazy(() => import("../pages/LoginPage"));
 
 
 const PublicRoutes = [
@@ -18,6 +20,7 @@ const PublicRoutes = [
       { path: "contact", element: <ContactPage/> },
       { path: "register", element: <SignUp/> },
       { path: "login", element: <LoginPage/> },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ];

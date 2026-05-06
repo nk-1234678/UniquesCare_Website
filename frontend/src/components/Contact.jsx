@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useToast } from "./ui/ToastProvider";
 
 const InstagramIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -31,6 +32,7 @@ const MapIcon = () => (
 );
 
 export default function ContactPage() {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -61,7 +63,7 @@ export default function ContactPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert("Message sent!");
+    showToast({ type: "success", message: "Message sent successfully." });
   };
 
   return (

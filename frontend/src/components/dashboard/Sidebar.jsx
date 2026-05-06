@@ -1,20 +1,81 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { useUserProfile } from "../../hooks/useUserProfile";
 
-const Sidebar = ({ isOpen, setIsOpen, navItems }) => {
+const Sidebar = ({ isOpen = true, setIsOpen = () => {}, navItems = [] }) => {
+  const { user } = useAuth();
+  const { displayName, displayRole, initials } = useUserProfile(user);
+  const safeNavItems = Array.isArray(navItems) ? navItems : [];
+  const isGroupedNav = safeNavItems.length > 0 && Array.isArray(safeNavItems[0]?.items);
+
+  const renderNavLink = (item, keyPrefix = "item") => (
+    <NavLink
+      key={`${keyPrefix}-${item?.path || item?.label}`}
+      to={item?.path || "#"}
+      end={Boolean(item.end)}
+      title={!isOpen ? item?.label || "Menu" : ""}
+      className={({ isActive }) =>
+        `relative flex items-center whitespace-nowrap transition-all ${
+          isActive ? "text-[#9B1C1C]" : "hover:text-[#9B1C1C]"
+        }`
+      }
+      style={{
+        gap: 13,
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 11,
+        paddingBottom: 11,
+        borderRadius: 8,
+        color: "var(--text-secondary)",
+        background: "transparent",
+      }}
+    >
+      {({ isActive }) => (
+        <>
+          <span className="flex justify-center" style={{ width: 20 }}>
+            {item?.icon || "•"}
+          </span>
+
+          {isOpen && <span className="text-[13.5px] font-medium tracking-[0.3px]">{item?.label || "Untitled"}</span>}
+
+          {isActive && (
+            <div className="absolute right-0 bg-[#9B1C1C] rounded-l" style={{ top: "20%", height: "60%", width: 3 }} />
+          )}
+        </>
+      )}
+    </NavLink>
+  );
+
   return (
     <div
-      className={`relative h-screen flex flex-col bg-white border-r border-[#E8E0E0] shadow-[2px_0_12px_rgba(155,28,28,0.06)] transition-all duration-300
-      ${isOpen ? "w-[260px]" : "w-[68px]"}`}
+      className="relative h-screen flex flex-col transition-all duration-300"
+      style={{
+        background: "var(--bg-surface)",
+        borderRight: "1px solid var(--border-color)",
+        boxShadow: "var(--shadow-soft)",
+        color: "var(--text-primary)",
+        width: isOpen ? 260 : 68,
+      }}
     >
       {/* Left Accent Stripe */}
-      <div className="absolute left-0 top-0 w-[3px] h-full bg-gradient-to-b from-[#9B1C1C] to-[#7B1111]" />
+      <div
+        className="absolute left-0 top-0 h-full"
+        style={{ width: 3, backgroundImage: "linear-gradient(to bottom, #9B1C1C, #7B1111)" }}
+      />
 
       {/* Toggle Button */}
-      <div className="absolute top-[22px] -right-[14px] z-20">
+      <div className="absolute z-20" style={{ top: 22, right: -14 }}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-[28px] h-[28px] bg-white border border-[#EDE5E5] rounded-full shadow-[0_2px_8px_rgba(155,28,28,0.12)] flex items-center justify-center hover:bg-[#9B1C1C] hover:border-[#9B1C1C] group transition"
+          className="rounded-full flex items-center justify-center group transition"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-color)",
+            boxShadow: "var(--shadow-soft)",
+            width: 28,
+            height: 28,
+          }}
         >
           <svg
             width="12"
@@ -25,9 +86,10 @@ const Sidebar = ({ isOpen, setIsOpen, navItems }) => {
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={`text-[#6B4E4E] group-hover:text-white transition-transform duration-300 ${
+            className={`group-hover:text-white transition-transform duration-300 ${
               !isOpen ? "rotate-180" : ""
             }`}
+            style={{ color: "var(--text-secondary)" }}
           >
             <polyline points="15 18 9 12 15 6" />
           </svg>
@@ -35,15 +97,23 @@ const Sidebar = ({ isOpen, setIsOpen, navItems }) => {
       </div>
 
       {/* Logo */}
-      <div className="flex items-center gap-3 px-[22px] pt-[28px] pb-[20px] border-b border-[#E8E0E0] whitespace-nowrap overflow-hidden">
+      <div
+        className="flex items-center gap-3 whitespace-nowrap overflow-hidden"
+        style={{ borderBottom: "1px solid var(--border-color)", paddingLeft: 22, paddingRight: 22, paddingTop: 28, paddingBottom: 20 }}
+      >
         <div
           className={`flex items-center justify-center font-extrabold text-white transition-all duration-300
           ${
             isOpen
-              ? "w-[42px] h-[42px] text-[18px] rounded-[8px]"
-              : "w-[34px] h-[34px] text-[12px] rounded-[6px]"
+              ? "text-[18px]"
+              : "text-[12px]"
           }
           bg-[#C0272D] shadow-[0_2px_6px_rgba(192,39,45,0.25)]`}
+          style={{
+            width: isOpen ? 42 : 34,
+            height: isOpen ? 42 : 34,
+            borderRadius: isOpen ? 8 : 6,
+          }}
         >
           UC
         </div>
@@ -54,7 +124,7 @@ const Sidebar = ({ isOpen, setIsOpen, navItems }) => {
               style={{
                 fontSize: "20px",
                 fontWeight: 700,
-                color: "#111827",
+                color: "var(--text-primary)",
                 letterSpacing: "-0.02em",
               }}
             >
@@ -64,7 +134,7 @@ const Sidebar = ({ isOpen, setIsOpen, navItems }) => {
               style={{
                 fontSize: "9px",
                 fontWeight: 500,
-                color: "#6b7280",
+                color: "var(--text-muted)",
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
                 marginTop: "1px",
@@ -77,63 +147,49 @@ const Sidebar = ({ isOpen, setIsOpen, navItems }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-[10px] py-[18px] overflow-y-auto">
+      <nav className="flex-1 overflow-y-auto" style={{ paddingLeft: 10, paddingRight: 10, paddingTop: 18, paddingBottom: 18 }}>
         {isOpen && (
-          <div className="text-[9px] tracking-[2.5px] uppercase text-[#A08080] px-3 pb-2">
+          <div className="text-[9px] tracking-[2.5px] uppercase px-3 pb-2" style={{ color: "var(--text-muted)" }}>
             Main Menu
           </div>
         )}
 
-        {navItems.map((item, i) => (
-          <NavLink
-            key={i}
-            to={item.path}
-            end={item.path === "/dashboard"}
-            title={!isOpen ? item.label : ""}
-            className={({ isActive }) =>
-              `relative flex items-center gap-[13px] px-[12px] py-[11px] rounded-[6px] whitespace-nowrap transition-all
-              ${
-                isActive
-                  ? "bg-[rgba(155,28,28,0.1)] text-[#9B1C1C]"
-                  : "text-[#6B4E4E] hover:bg-[rgba(155,28,28,0.06)] hover:text-[#9B1C1C]"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span className="w-[20px] flex justify-center">
-                  {item.icon}
-                </span>
-
+        {isGroupedNav
+          ? safeNavItems.map((section, sectionIndex) => (
+              <div key={section.title || sectionIndex} style={{ marginBottom: 14 }}>
                 {isOpen && (
-                  <span className="text-[13.5px] font-medium tracking-[0.3px]">
-                    {item.label}
-                  </span>
+                  <div
+                    className="text-[9px] tracking-[2.2px] uppercase px-3 pb-2 pt-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {section.title}
+                  </div>
                 )}
 
-                {isActive && (
-                  <div className="absolute right-0 top-[20%] h-[60%] w-[3px] bg-[#9B1C1C] rounded-l" />
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
+                <div style={{ display: "grid", gap: 4 }}>
+                  {(Array.isArray(section.items) ? section.items : []).map((item, itemIndex) =>
+                    renderNavLink(item, `${sectionIndex}-${itemIndex}`),
+                  )}
+                </div>
+              </div>
+            ))
+          : safeNavItems.map((item, i) => renderNavLink(item, `flat-${i}`))}
       </nav>
 
       {/* Footer */}
-      <div className="px-[10px] pt-[14px] pb-[20px] border-t border-[#E8E0E0]">
-        <div className="flex items-center gap-3 px-[12px] py-[10px] rounded-[6px] hover:bg-[rgba(155,28,28,0.06)] transition whitespace-nowrap overflow-hidden">
-          <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#9B1C1C] to-[#7B1111] text-white flex items-center justify-center text-[13px] font-semibold border-2 border-[#FDEAEA]">
-            AK
+      <div style={{ borderTop: "1px solid var(--border-color)", paddingLeft: 10, paddingRight: 10, paddingTop: 14, paddingBottom: 20 }}>
+        <div className="flex items-center gap-3 hover:bg-[rgba(155,28,28,0.06)] transition whitespace-nowrap overflow-hidden" style={{ paddingLeft: 12, paddingRight: 12, paddingTop: 10, paddingBottom: 10, borderRadius: 6 }}>
+          <div className="rounded-full text-white flex items-center justify-center text-[13px] font-semibold border-2 border-[#FDEAEA]" style={{ width: 34, height: 34, backgroundImage: "linear-gradient(to bottom right, #9B1C1C, #7B1111)" }}>
+            {initials}
           </div>
 
           {isOpen && (
             <div>
-              <div className="text-[13px] font-medium text-[#1A0A0A]">
-                Alex Kiran
+              <div className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>
+                {displayName}
               </div>
               <div className="text-[10px] uppercase tracking-[0.5px] text-[#C0392B]">
-                Administrator
+                {displayRole}
               </div>
             </div>
           )}

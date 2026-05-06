@@ -1,57 +1,41 @@
 import React, { useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { getErrorMessage } from '../api/httpClient';
+import { useToast } from '../components/ui/ToastProvider';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { setUser } = useOutletContext();
+  const { login } = useAuth();
+  const { showToast } = useToast();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("student");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!email || !password) {
-      alert("All fields are required");
+      showToast({ type: "warning", message: "All fields are required." });
       return;
     }
 
     try {
       setLoading(true);
-
-      const res = await fetch(
-        "http://localhost:5000/api/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          credentials: "include", // 🔥 required for cookies
-          body: JSON.stringify({
-            email,
-            password
-          })
-        }
-      );
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert("Logged In Successfully ✅");
-
-        console.log("User:", data.user);
-        setUser(data.user);
-
-        // Redirect after success
-        navigate("/");
-      } else {
-        alert(data.message || "Login failed");
+      const data = await login({ email, password, role });
+      if (!data || !data.user) {
+        throw new Error("Invalid login response");
       }
+      showToast({ type: "success", message: "Logged in successfully." });
+
+      const normalizedRole = String(data.user?.role || role || "student").toLowerCase();
+      navigate(`/dashboard/${normalizedRole}`);
 
     } catch (error) {
       console.error("Login error:", error);
-      alert("Something went wrong");
+      showToast({ type: "error", message: getErrorMessage(error, "Login failed") });
     } finally {
       setLoading(false);
     }
@@ -68,9 +52,30 @@ const LoginPage = () => {
           <p className="text-sm text-gray-500 mt-2">
             Login to access your account
           </p>
+          {role === "admin" && (
+            <p className="text-xs text-gray-500 mt-1">
+              Admin login uses a fixed password configured on server.
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* Role */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Role
+            </label>
+            <select
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+            >
+              <option value="student">Student</option>
+              <option value="technician">Technician</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
 
           {/* Email */}
           <div>
@@ -113,12 +118,12 @@ const LoginPage = () => {
 
         <p className="text-center text-sm text-gray-600 mt-6">
           Don't have an account?
-          <a
-            href="/register"
+          <Link
+            to="/register"
             className="ml-1 text-red-600 font-semibold hover:underline"
           >
             Sign Up
-          </a>
+          </Link>
         </p>
 
       </div>

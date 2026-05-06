@@ -1,25 +1,23 @@
 import React from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from 'react';
+import { useAuth } from "../context/AuthContext";
 
-function Navbar({ user, setUser }) {
+function Navbar({ user }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const toggleDropdown = () => setOpen(!open);
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:5000/api/auth/logout", {
-        method: "POST",
-        credentials: "include"
-      });
+      await logout();
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
       setOpen(false);
-      if (setUser) setUser(null);
-      navigate("/");
+      navigate("/", { replace: true });
     }
   };
 
@@ -104,8 +102,6 @@ function Navbar({ user, setUser }) {
         >
           {[
             { name: "About Us", path: "/about" },
-            { name: "Services", path: "/services" }, // ← added suggestion
-            { name: "Features", path: "/features" }, // ← optional, common in such sites
             { name: "Contact", path: "/contact" },
           ].map((item) => (
             <Link
@@ -157,7 +153,7 @@ function Navbar({ user, setUser }) {
                   zIndex: 100,
                 }}
               >
-              <Link to ="/dashboard">
+              <Link to={`/dashboard/${String(user?.role || "student").toLowerCase()}`}>
               <button
                 onClick={() => console.log("Go to Dashboard")}
                 style={{

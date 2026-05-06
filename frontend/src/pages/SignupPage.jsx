@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { authApi } from "../api/authApi";
+import { getErrorMessage } from "../api/httpClient";
+import { useToast } from "../components/ui/ToastProvider";
 
 function SignUp() {
   const navigate = useNavigate();
-  const { setUser } = useOutletContext();
+  const { showToast } = useToast();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -15,43 +18,22 @@ function SignUp() {
     e.preventDefault();
 
     if (!name || !email || !password) {
-      alert("All fields are required");
+      showToast({ type: "warning", message: "All fields are required." });
       return;
     }
 
     try {
       setLoading(true);
-
-      const res = await fetch(
-        "http://localhost:5000/api/auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          credentials: "include", // 🔥 required for cookies
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-            role
-          })
-        }
-      );
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert("Registered Successfully ✅");
-        setUser(data.user);
-        navigate("/login");
-      } else {
-        alert(data.message || "Registration failed");
+      const data = await authApi.register({ name, email, password, role });
+      if (!data || !data.user) {
+        throw new Error("Invalid registration response");
       }
+      showToast({ type: "success", message: "Registered successfully." });
+      navigate("/login");
 
     } catch (error) {
       console.error("Registration error:", error);
-      alert("Something went wrong");
+      showToast({ type: "error", message: getErrorMessage(error, "Registration failed") });
     } finally {
       setLoading(false);
     }
@@ -125,8 +107,11 @@ function SignUp() {
               onChange={(e) => setRole(e.target.value)}
             >
               <option value="student">Student</option>
-              <option value="admin">Admin</option>
+              <option value="technician">Technician</option>
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Admin account registration is disabled. Admin can login only with fixed credentials.
+            </p>
           </div>
 
           {/* Button */}
@@ -142,12 +127,12 @@ function SignUp() {
 
         <p className="text-center text-sm text-gray-600 mt-6">
           Already have an account?
-          <a
-            href="/login"
+          <Link
+            to="/login"
             className="ml-1 text-red-600 font-semibold hover:underline"
           >
             Sign In
-          </a>
+          </Link>
         </p>
 
       </div>

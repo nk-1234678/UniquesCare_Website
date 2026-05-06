@@ -8,14 +8,6 @@ import Navbar from "../components/Navbar";
 import HowItWorks from "../components/HowItWorks";
 import Tech1 from "../components/Tech1";
 
-
-
-
-
-
-
-
-
 export default function App() {
 
 

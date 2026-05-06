@@ -22,8 +22,36 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["student", "admin"],
+      enum: ["student", "technician", "admin"],
       default: "student"
+    },
+    department: {
+      type: String,
+      default: ""
+    },
+    phone: {
+      type: String,
+      default: ""
+    },
+    profilePhoto: {
+      type: String,
+      default: ""
+    },
+    hasLoggedInBefore: {
+      type: Boolean,
+      default: false
+    },
+     academicYear: {
+      type: String,
+      default: "2025-26"
+    },
+    academicStartYear: {
+      type: String,
+      default: ""
+    },
+    academicEndYear: {
+      type: String,
+      default: ""
     }
   },
   { timestamps: true }
