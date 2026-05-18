@@ -8,7 +8,17 @@ let isFetching = false;
 let authRequest = null;
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const STORAGE_KEY = "auth_user";
+  const getStoredUser = () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const [user, setUser] = useState(() => getStoredUser());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -28,10 +38,21 @@ export const AuthProvider = ({ children }) => {
       const data = await authApi.getCurrentUser();
       const nextUser = data?.user || null;
       setUser(nextUser);
+      try {
+        if (nextUser) localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+        else localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // ignore storage errors
+      }
       return nextUser;
     } catch (err) {
       setUser(null);
       setError(getErrorMessage(err, "Failed to authenticate user"));
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // ignore storage removal error
+      }
       return null;
     } finally {
       setLoading(false);
@@ -51,6 +72,11 @@ export const AuthProvider = ({ children }) => {
     const onSessionExpired = () => {
       setUser(null);
       setError("Your session expired. Please log in again.");
+      try {
+        localStorage.removeItem("auth_user");
+      } catch {
+        // ignore storage removal error
+      }
     };
 
     window.addEventListener("auth:session-expired", onSessionExpired);
@@ -64,6 +90,11 @@ export const AuthProvider = ({ children }) => {
     }
 
     setUser(data.user);
+    try {
+      localStorage.setItem("auth_user", JSON.stringify(data.user));
+    } catch {
+      // ignore parse error
+    }
     setError(null);
     return data;
   };
@@ -76,6 +107,11 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setUser(null);
       setError(null);
+      try {
+        localStorage.removeItem("auth_user");
+      } catch {
+        // ignore storage removal error
+      }
     }
   };
 

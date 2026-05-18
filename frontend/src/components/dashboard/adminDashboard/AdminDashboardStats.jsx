@@ -4,7 +4,7 @@ const StatCard = ({ label, value, icon, color, bg, delay }) => (
   <div
     style={{
       background: "#fff",
-      borderRadius: 16,
+      borderRadius: 10,
       padding: "24px 28px",
       display: "flex",
       alignItems: "center",

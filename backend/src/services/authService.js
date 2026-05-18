@@ -71,6 +71,13 @@ export const loginUser = async (email, password, role) => {
     throw error;
   }
 
+  // Blocked users cannot login
+  if (user.isActive === false) {
+    const error = new Error("Account is blocked");
+    error.statusCode = 403;
+    throw error;
+  }
+
   if (typeof role === "string" && role.trim().length > 0) {
     const normalizedRole = role.trim().toLowerCase();
     if (normalizedRole !== user.role) {

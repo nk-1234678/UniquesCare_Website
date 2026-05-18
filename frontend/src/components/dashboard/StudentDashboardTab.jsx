@@ -46,14 +46,14 @@ const StudentDashboardTab = () => {
   const totalRaised = complaints.length;
   const resolvedCount = complaints.filter(item => item.status === "Resolved").length;
   const inProgressCount = complaints.filter(item => item.status === "In Progress").length;
-  const pendingCount = complaints.filter(item => item.status === "Pending").length;
+  const pendingCount = complaints.filter(item => item.status === "Submitted").length;
 
   const chartMonthlyData = buildMonthlyData(complaints);
   const recentComplaints = buildRecentComplaints(complaints);
   const pieChartData = [
     { name: "Resolved", value: resolvedCount, color: STATUS_COLORS.Resolved },
     { name: "In Progress", value: inProgressCount, color: STATUS_COLORS["In Progress"] },
-    { name: "Pending", value: pendingCount, color: STATUS_COLORS.Pending },
+    { name: "Submitted", value: pendingCount, color: STATUS_COLORS.Submitted },
   ];
 
   return (
@@ -72,7 +72,7 @@ const StudentDashboardTab = () => {
           { label: "Total Raised", value: totalRaised, icon: "📋", color: "#4F7FFA", bg: "#EEF3FF" },
           { label: "Resolved", value: resolvedCount, icon: "✅", color: "#22C55E", bg: "#EDFAF3" },
           { label: "In Progress", value: inProgressCount, icon: "🔄", color: "#F59E0B", bg: "#FFF8EB" },
-          { label: "Pending", value: pendingCount, icon: "⏳", color: "#EF4444", bg: "#FFF0F0" },
+          { label: "Submitted", value: pendingCount, icon: "⏳", color: "#EF4444", bg: "#FFF0F0" },
         ]}
       />
 

@@ -12,8 +12,17 @@ import {
   Legend,
   LineChart,
   Line,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import { buildWeeklyData, buildMonthlyData } from "./adminDashboardUtils";
+
+const ROLE_COLORS = {
+  student: "#3B82F6",
+  technician: "#8B5CF6",
+  admin: "#EC4899",
+};
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -39,38 +48,38 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-const ComplaintCharts = ({ complaints }) => {
-  const [weeklyChartType, setWeeklyChartType] = useState("area");
-  const [monthlyChartType, setMonthlyChartType] = useState("bar");
+const ComplaintCharts = ({ complaints, users = [] }) => {
+  const [viewMode, setViewMode] = useState("weekly"); // 'weekly' | 'monthly'
 
   const weeklyData = buildWeeklyData(complaints);
   const monthlyData = buildMonthlyData(complaints);
 
-  const ChartButton = ({ type, label, active, onClick }) => (
+  const data = viewMode === "weekly" ? weeklyData : monthlyData;
+
+  const studentUsers = users.filter((user) => user.role === "student");
+  const technicianUsers = users.filter((user) => user.role === "technician");
+  const adminUsers = users.filter((user) => user.role === "admin");
+
+  const roleData = [
+    { name: "Students", value: studentUsers.length, color: ROLE_COLORS.student },
+    { name: "Technicians", value: technicianUsers.length, color: ROLE_COLORS.technician },
+    { name: "Admins", value: adminUsers.length, color: ROLE_COLORS.admin },
+  ];
+
+  const totalUsers = users.length;
+
+  const ToggleButton = ({ label, active, onClick }) => (
     <button
       onClick={onClick}
       style={{
-        padding: "5px 14px",
+        padding: "6px 12px",
         borderRadius: 8,
         border: "1px solid #E5E5E5",
-        background: active ? "#C0272D" : "#fff",
+        background: active ? "#B91C1C" : "#fff",
         color: active ? "#fff" : "#666",
-        fontSize: 12,
-        fontWeight: 600,
+        fontSize: 13,
+        fontWeight: 700,
         cursor: "pointer",
-        transition: "all 0.2s ease",
-      }}
-      onMouseEnter={(e) => {
-        if (!active) {
-          e.currentTarget.style.borderColor = "#C0272D";
-          e.currentTarget.style.color = "#C0272D";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!active) {
-          e.currentTarget.style.borderColor = "#E5E5E5";
-          e.currentTarget.style.color = "#666";
-        }
       }}
     >
       {label}
@@ -78,161 +87,96 @@ const ComplaintCharts = ({ complaints }) => {
   );
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 24,
-      }}
-    >
-      {/* Weekly Complaints Chart */}
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 16,
-          padding: "24px",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-          border: "1px solid #F0F0F0",
-          animation: "fadeUp 0.5s ease 0.2s both",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Weekly Complaints</h3>
-            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#999" }}>Last 7 days overview</p>
+    <div style={{ display: "grid", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 20 }}>
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+            padding: "16px",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            border: "1px solid #F0F0F0",
+            animation: "fadeUp 0.5s ease 0.2s both",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#B91C1C" }}>
+                {viewMode === "weekly" ? "Weekly Complaints (Bar)" : "Monthly Complaints (Bar)"}
+              </h3>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6B7280" }}>
+                {viewMode === "weekly" ? "Last 7 days" : "Monthly overview"}
+              </p>
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <ToggleButton label="Weekly" active={viewMode === "weekly"} onClick={() => setViewMode("weekly")} />
+              <ToggleButton label="Monthly" active={viewMode === "monthly"} onClick={() => setViewMode("monthly")} />
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {["area", "line", "bar"].map((type) => (
-              <ChartButton
-                key={type}
-                type={type}
-                label={type.charAt(0).toUpperCase() + type.slice(1)}
-                active={weeklyChartType === type}
-                onClick={() => setWeeklyChartType(type)}
-              />
+
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey={viewMode === "weekly" ? "day" : "month"} stroke="#999" style={{ fontSize: 12 }} />
+              <YAxis stroke="#999" style={{ fontSize: 12 }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar dataKey="raised" fill="#B91C1C" name="Raised" />
+              {data[0] && data[0].inProgress !== undefined && <Bar dataKey="inProgress" fill="#F59E0B" name="In Progress" />}
+              {data[0] && data[0].resolved !== undefined && <Bar dataKey="resolved" fill="#22C55E" name="Resolved" />}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 16,
+            padding: "14px",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+            border: "1px solid #F0F0F0",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div style={{ marginBottom: 10 }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>User Distribution</h3>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6B7280" }}>Who is using the system</p>
+          </div>
+
+          <div style={{ height: 180, position: "relative" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Tooltip />
+                <Pie data={roleData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={84} paddingAngle={4}>
+                  {roleData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+
+            <div style={{ position: "absolute", left: 0, right: 0, top: 70, textAlign: "center", pointerEvents: "none" }}>
+              <div style={{ fontSize: 13, color: "#6B7280" }}>Total Users</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{totalUsers}</div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+            {roleData.map((role) => (
+              <div key={role.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 10, border: "1px solid #F3F4F6" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: 999, background: role.color }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>{role.name}</span>
+                </div>
+                <strong style={{ fontSize: 14, color: "#111827" }}>{role.value}</strong>
+              </div>
             ))}
           </div>
         </div>
-
-        <ResponsiveContainer width="100%" height={300}>
-          {weeklyChartType === "area" && (
-            <AreaChart data={weeklyData}>
-              <defs>
-                <linearGradient id="colorRaised" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorResolved" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#22C55E" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="day" stroke="#999" style={{ fontSize: 12 }} />
-              <YAxis stroke="#999" style={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Area type="monotone" dataKey="raised" stroke="#3B82F6" fillOpacity={1} fill="url(#colorRaised)" name="Raised" />
-              <Area type="monotone" dataKey="resolved" stroke="#22C55E" fillOpacity={1} fill="url(#colorResolved)" name="Resolved" />
-            </AreaChart>
-          )}
-          {weeklyChartType === "line" && (
-            <LineChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="day" stroke="#999" style={{ fontSize: 12 }} />
-              <YAxis stroke="#999" style={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line type="monotone" dataKey="raised" stroke="#3B82F6" strokeWidth={2} name="Raised" />
-              <Line type="monotone" dataKey="resolved" stroke="#22C55E" strokeWidth={2} name="Resolved" />
-            </LineChart>
-          )}
-          {weeklyChartType === "bar" && (
-            <BarChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="day" stroke="#999" style={{ fontSize: 12 }} />
-              <YAxis stroke="#999" style={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="raised" fill="#3B82F6" name="Raised" />
-              <Bar dataKey="resolved" fill="#22C55E" name="Resolved" />
-            </BarChart>
-          )}
-        </ResponsiveContainer>
       </div>
 
-      {/* Monthly Complaints Chart */}
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 16,
-          padding: "24px",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-          border: "1px solid #F0F0F0",
-          animation: "fadeUp 0.5s ease 0.3s both",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Monthly Complaint Trends</h3>
-            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#999" }}>Year overview</p>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {["bar", "area", "line"].map((type) => (
-              <ChartButton
-                key={type}
-                type={type}
-                label={type.charAt(0).toUpperCase() + type.slice(1)}
-                active={monthlyChartType === type}
-                onClick={() => setMonthlyChartType(type)}
-              />
-            ))}
-          </div>
-        </div>
-
-        <ResponsiveContainer width="100%" height={300}>
-          {monthlyChartType === "bar" && (
-            <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" stroke="#999" style={{ fontSize: 12 }} />
-              <YAxis stroke="#999" style={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="raised" fill="#3B82F6" name="Raised" />
-              <Bar dataKey="resolved" fill="#22C55E" name="Resolved" />
-              <Bar dataKey="inProgress" fill="#F59E0B" name="In Progress" />
-            </BarChart>
-          )}
-          {monthlyChartType === "area" && (
-            <AreaChart data={monthlyData}>
-              <defs>
-                <linearGradient id="colorMonthRaised" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" stroke="#999" style={{ fontSize: 12 }} />
-              <YAxis stroke="#999" style={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Area type="monotone" dataKey="raised" stroke="#3B82F6" fillOpacity={1} fill="url(#colorMonthRaised)" name="Raised" />
-            </AreaChart>
-          )}
-          {monthlyChartType === "line" && (
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" stroke="#999" style={{ fontSize: 12 }} />
-              <YAxis stroke="#999" style={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line type="monotone" dataKey="raised" stroke="#3B82F6" strokeWidth={2} name="Raised" />
-              <Line type="monotone" dataKey="resolved" stroke="#22C55E" strokeWidth={2} name="Resolved" />
-              <Line type="monotone" dataKey="inProgress" stroke="#F59E0B" strokeWidth={2} name="In Progress" />
-            </LineChart>
-          )}
-        </ResponsiveContainer>
-      </div>
     </div>
   );
 };

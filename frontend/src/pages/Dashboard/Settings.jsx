@@ -258,7 +258,7 @@ const SettingsPage = () => {
                     onChange={() => setNotif((p) => ({ ...p, complaintUpdates: !p.complaintUpdates }))}
                   />
                 </SettingRow>
-                <SettingRow label="Reminder Alerts" description="Alert for pending complaints.">
+                <SettingRow label="Reminder Alerts" description="Alert for submitted complaints.">
                   <Toggle
                     checked={notif.reminderAlerts}
                     onChange={() => setNotif((p) => ({ ...p, reminderAlerts: !p.reminderAlerts }))}

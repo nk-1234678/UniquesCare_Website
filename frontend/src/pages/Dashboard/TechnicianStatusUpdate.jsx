@@ -5,11 +5,11 @@ import { getErrorMessage } from "../../api/httpClient";
 import ErrorState from "../../components/ui/ErrorState";
 import LoadingState from "../../components/ui/LoadingState";
 
-const STATUS_OPTIONS = ["Pending", "In Progress", "Resolved"];
+const STATUS_OPTIONS = ["Submitted", "Under Review", "In Progress", "Resolved"];
 const STATUS_STYLE = {
   Resolved: { bg: "#EDFAF3", color: "#16A34A" },
   "In Progress": { bg: "#FFF8EB", color: "#D97706" },
-  Pending: { bg: "#FFF0F0", color: "#DC2626" },
+  Submitted: { bg: "#FFF0F0", color: "#DC2626" },
 };
 
 const formatDate = (value) => {
@@ -24,7 +24,7 @@ const formatDate = (value) => {
 const normalizeComplaint = (complaint) => ({
   ...complaint,
   id: complaint._id ?? complaint.id,
-  status: complaint.status ?? "Pending",
+  status: complaint.status ?? "Submitted",
   date: complaint.date ?? formatDate(complaint.createdAt),
 });
 
@@ -124,7 +124,7 @@ const TechnicianStatusUpdate = () => {
   };
 
   const totalCount = complaints.length;
-  const pendingCount = complaints.filter((item) => item.status === "Pending").length;
+  const submittedCount = complaints.filter((item) => item.status === "Submitted").length;
   const inProgressCount = complaints.filter((item) => item.status === "In Progress").length;
   const resolvedCount = complaints.filter((item) => item.status === "Resolved").length;
 
@@ -166,7 +166,7 @@ const TechnicianStatusUpdate = () => {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, auto)", gap: 12 }}>
           {[
             { label: "Total", value: totalCount },
-            { label: "Pending", value: pendingCount },
+            { label: "Submitted", value: submittedCount },
             { label: "In Progress", value: inProgressCount },
             { label: "Resolved", value: resolvedCount },
           ].map((item) => (

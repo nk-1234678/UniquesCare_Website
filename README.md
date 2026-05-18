@@ -16,7 +16,7 @@ UniqueCare is built with a focus on security, performance, and scalability. It d
 - 📝 **Admin Account Seeding** – Initialize admin users with customizable credentials
 
 ### Complaint Management
-- 📋 **Full Lifecycle Tracking** – Complaints move through stages: Pending → Assigned → In Progress → Resolved
+- 📋 **Full Lifecycle Tracking** – Complaints move through stages: Submitted → Under Review → In Progress → Resolved
 - 🎯 **Role-Specific Operations:**
   - Students: Create and view their own complaints
   - Technicians: View assigned complaints, update status

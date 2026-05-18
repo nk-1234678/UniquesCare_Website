@@ -15,7 +15,7 @@ const FEATURES = [
 {
     icon: Clock,
     title: "Real-Time Tracking",
-    desc: "Follow every complaint from Pending → Assigned → In Progress → Resolved, live."
+    desc: "Follow every complaint from Submitted → Under Review → In Progress → Resolved, live."
 },
 {
     icon: BarChart3,

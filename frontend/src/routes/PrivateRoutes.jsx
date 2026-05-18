@@ -12,6 +12,7 @@ const Alerts = lazy(() => import("../pages/Dashboard/Alerts"));
 const SettingsPage = lazy(() => import("../pages/Dashboard/Settings"));
 const Reports = lazy(() => import("../pages/Dashboard/Reports"));
 const RaiseComplaintPage = lazy(() => import("../pages/Dashboard/Complaint"));
+const AllComplaints = lazy(() => import("../pages/Dashboard/AllComplaints"));
 const TechnicianStatusUpdate = lazy(() => import("../pages/Dashboard/TechnicianStatusUpdate"));
 const Logout = lazy(() => import("../pages/Dashboard/Logout"));
 const AdminSectionPage = lazy(() => import("../pages/Dashboard/Admin"));
@@ -53,6 +54,7 @@ const PrivateRoutes = [
         element: <DashboardLayout />,
         children: [
           { index: true, element: <DashboardHome /> },
+          { path: "complaints/all", element: <AllComplaints /> },
           { path: "complaints/:view", element: <RaiseComplaintPage /> },
           { path: "users/:view", element: <AdminSectionPage /> },
           { path: "users/students", element: <StudentsList /> },

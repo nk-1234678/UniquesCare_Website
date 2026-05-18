@@ -125,10 +125,14 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     return sendError(res, 401, "Unauthorized");
   }
 
-  const user = await User.findById(decoded.id).select("_id");
+  const user = await User.findById(decoded.id).select("_id isActive");
 
   if (!user) {
     return sendError(res, 401, "Unauthorized");
+  }
+
+  if (user.isActive === false) {
+    return sendError(res, 403, "Account blocked");
   }
 
   const accessToken = signAccessToken(user._id);
@@ -214,7 +218,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
 // ✅ GET USERS FOR ADMIN DASHBOARD
 export const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find({})
-    .select("name email role department createdAt hasLoggedInBefore")
+    .select("name email role department createdAt hasLoggedInBefore isActive")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -234,7 +238,7 @@ export const getUsers = asyncHandler(async (req, res) => {
 // ✅ GET ALL STUDENTS WITH COMPLAINT COUNT
 export const getStudents = asyncHandler(async (req, res) => {
   const students = await User.find({ role: "student" })
-    .select("name email department createdAt hasLoggedInBefore")
+    .select("name email department createdAt hasLoggedInBefore isActive")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -251,6 +255,7 @@ export const getStudents = asyncHandler(async (req, res) => {
         department: student.department,
         createdAt: student.createdAt,
         hasLoggedInBefore: student.hasLoggedInBefore,
+        isActive: student.isActive ?? true,
         complaintCount,
       };
     })
@@ -297,7 +302,7 @@ export const getStudentDetail = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const student = await User.findById(id)
-    .select("name email department createdAt hasLoggedInBefore")
+    .select("name email department createdAt hasLoggedInBefore isActive")
     .lean();
 
   if (!student) {
@@ -311,7 +316,7 @@ export const getStudentDetail = asyncHandler(async (req, res) => {
 
   const complaintStats = {
     total: complaints.length,
-    pending: complaints.filter((c) => c.status === "Pending").length,
+    submitted: complaints.filter((c) => c.status === "Submitted").length,
     inProgress: complaints.filter((c) => c.status === "In Progress").length,
     resolved: complaints.filter((c) => c.status === "Resolved").length,
   };
@@ -356,7 +361,7 @@ export const getTechnicianDetail = asyncHandler(async (req, res) => {
 
   const complaintStats = {
     total: complaints.length,
-    pending: complaints.filter((c) => c.status === "Pending").length,
+    submitted: complaints.filter((c) => c.status === "Submitted").length,
     inProgress: complaints.filter((c) => c.status === "In Progress").length,
     resolved: complaints.filter((c) => c.status === "Resolved").length,
   };
@@ -379,5 +384,30 @@ export const getTechnicianDetail = asyncHandler(async (req, res) => {
       priority: c.priority,
       createdAt: c.createdAt,
     })),
+  });
+});
+
+// ✅ BLOCK / UNBLOCK STUDENT
+export const blockStudent = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const user = await User.findById(id);
+  if (!user || (user.role !== "student" && user.role !== "technician")) {
+    return sendError(res, 404, "User not found");
+  }
+
+  // Toggle isActive
+  user.isActive = req.body.isActive === undefined ? !user.isActive : Boolean(req.body.isActive);
+  await user.save();
+
+  return sendSuccess(res, 200, {
+    message: user.isActive ? "Student unblocked" : "Student blocked",
+    student: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      department: user.department,
+      isActive: user.isActive,
+    },
   });
 });

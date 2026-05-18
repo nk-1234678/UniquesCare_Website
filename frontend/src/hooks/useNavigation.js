@@ -21,20 +21,10 @@ const buildAdminSections = (basePath) => [
     ],
   },
   {
-    title: "Technicians",
+    title: "Logout",
     items: [
-      { label: "Performance", icon: "📈", path: `${basePath}/technicians/performance` },
-      { label: "Assigned Complaints", icon: "🛠️", path: `${basePath}/technicians/assigned` },
-      { label: "Resolution Rate", icon: "🎯", path: `${basePath}/technicians/resolution-rate` },
-    ],
-  },
-  {
-    title: "Analytics / Reports",
-    items: [
-      { label: "Weekly Complaints", icon: "📅", path: `${basePath}/reports/weekly` },
-      { label: "Monthly Complaints", icon: "🗓️", path: `${basePath}/reports/monthly` },
-      { label: "Category-wise Data", icon: "🧩", path: `${basePath}/reports/categories` },
-      { label: "Charts", icon: "📊", path: `${basePath}/reports/charts` },
+      { label: "Logout", icon: "📅", path: `${basePath}/logout` },
+      
     ],
   },
 ];

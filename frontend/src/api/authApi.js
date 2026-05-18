@@ -12,4 +12,6 @@ export const authApi = {
   getTechnicians: () => request({ url: "/auth/technicians" }),
   getStudentDetail: (id) => request({ url: `/auth/students/${id}` }),
   getTechnicianDetail: (id) => request({ url: `/auth/technicians/${id}` }),
+  blockStudent: (id, isActive) => request({ url: `/auth/students/${id}/block`, method: "PUT", data: { isActive } }),
+  blockTechnician: (id, isActive) => request({ url: `/auth/technicians/${id}/block`, method: "PUT", data: { isActive } }),
 };

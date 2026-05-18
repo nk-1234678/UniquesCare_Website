@@ -2,11 +2,8 @@ import React, { useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
-  Cell,
   CartesianGrid,
   Legend,
-  PieChart,
-  Pie,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -16,9 +13,6 @@ import {
 const COLORS = {
   active: "#22C55E",
   inactive: "#F59E0B",
-  student: "#3B82F6",
-  technician: "#8B5CF6",
-  admin: "#EC4899",
 };
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -45,10 +39,10 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-const UserAnalyticsCharts = ({ users }) => {
+const UserAnalyticsCharts = ({ users = [], complaints = [] }) => {
   const [activityMode, setActivityMode] = useState("stacked");
 
-  const { activityData, roleData, totals } = useMemo(() => {
+  const { activityData, totals, recentComplaints } = useMemo(() => {
     const studentUsers = users.filter((user) => user.role === "student");
     const technicianUsers = users.filter((user) => user.role === "technician");
     const adminUsers = users.filter((user) => user.role === "admin");
@@ -62,16 +56,14 @@ const UserAnalyticsCharts = ({ users }) => {
     const technicianStats = buildByRole(technicianUsers);
     const adminStats = buildByRole(adminUsers);
 
+    const sortedComplaints = [...complaints].sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
     return {
       activityData: [
         { role: "Students", active: studentStats.active, inactive: studentStats.inactive },
         { role: "Technicians", active: technicianStats.active, inactive: technicianStats.inactive },
         { role: "Admins", active: adminStats.active, inactive: adminStats.inactive },
-      ],
-      roleData: [
-        { name: "Students", value: studentUsers.length, color: COLORS.student },
-        { name: "Technicians", value: technicianUsers.length, color: COLORS.technician },
-        { name: "Admins", value: adminUsers.length, color: COLORS.admin },
       ],
       totals: {
         active: users.filter((user) => user.hasLoggedInBefore).length,
@@ -79,23 +71,17 @@ const UserAnalyticsCharts = ({ users }) => {
         students: studentUsers.length,
         technicians: technicianUsers.length,
       },
+      recentComplaints: sortedComplaints.slice(0, 5),
     };
-  }, [users]);
+  }, [users, complaints]);
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1.2fr 0.8fr",
-        gap: 24,
-        marginTop: 28,
-      }}
-    >
+    <div style={{ display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 20, marginTop: 22 }}>
       <div
         style={{
           background: "#fff",
           borderRadius: 16,
-          padding: "24px",
+          padding: "18px",
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
           border: "1px solid #F0F0F0",
           animation: "fadeUp 0.5s ease 0.4s both",
@@ -131,7 +117,7 @@ const UserAnalyticsCharts = ({ users }) => {
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={320}>
+        <ResponsiveContainer width="100%" height={260}>
           <BarChart data={activityData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="role" stroke="#999" style={{ fontSize: 12 }} />
@@ -144,60 +130,43 @@ const UserAnalyticsCharts = ({ users }) => {
         </ResponsiveContainer>
       </div>
 
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 16,
-          padding: "24px",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-          border: "1px solid #F0F0F0",
-          animation: "fadeUp 0.5s ease 0.5s both",
-        }}
-      >
-        <div style={{ marginBottom: 20 }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>User Distribution</h3>
-          <p style={{ margin: "2px 0 0", fontSize: 12, color: "#999" }}>Students vs Technicians</p>
+      <div style={{ display: "grid", gap: 18 }}>
+        <div style={{ background: "#fff", borderRadius: 16, padding: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #F0F0F0", animation: "fadeUp 0.5s ease 0.5s both" }}>
+          <div style={{ marginBottom: 10 }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Recent Complaints</h3>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#999" }}>Latest 5 complaints</p>
+          </div>
+
+          <div style={{ display: "grid", gap: 8, maxHeight: 190, overflow: "auto", paddingRight: 2 }}>
+            {recentComplaints.length === 0 ? (
+              <div style={{ padding: 12, borderRadius: 10, border: "1px dashed #E5E7EB", color: "#6B7280" }}>
+                No complaints yet.
+              </div>
+            ) : (
+              recentComplaints.map((complaint) => (
+                <div key={complaint._id || complaint.id} style={{ padding: 10, borderRadius: 10, border: "1px solid #F3F4F6" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>
+                        {complaint.title || complaint.subject || complaint.category || "Complaint"}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>
+                        {complaint.description ? complaint.description.slice(0, 80) : "No description provided."}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{complaint.status || "Submitted"}</div>
+                      <div style={{ fontSize: 11, color: "#6B7280", marginTop: 5 }}>
+                        {complaint.createdAt ? new Date(complaint.createdAt).toLocaleDateString() : "Unknown"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={250}>
-          <PieChart>
-            <Tooltip content={<CustomTooltip />} />
-            <Pie
-              data={roleData}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              innerRadius={68}
-              outerRadius={96}
-              paddingAngle={4}
-            >
-              {roleData.map((entry) => (
-                <Cell key={entry.name} fill={entry.color} />
-              ))}
-            </Pie>
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, marginTop: 10 }}>
-          <div style={{ background: "#F0FDF4", borderRadius: 12, padding: 14, border: "1px solid #DCFCE7" }}>
-            <p style={{ margin: 0, fontSize: 12, color: "#166534", fontWeight: 700 }}>Active Users</p>
-            <p style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 800, color: "#14532D" }}>{totals.active}</p>
-          </div>
-          <div style={{ background: "#FFFBEB", borderRadius: 12, padding: 14, border: "1px solid #FDE68A" }}>
-            <p style={{ margin: 0, fontSize: 12, color: "#92400E", fontWeight: 700 }}>Inactive Users</p>
-            <p style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 800, color: "#78350F" }}>{totals.inactive}</p>
-          </div>
-          <div style={{ background: "#EFF6FF", borderRadius: 12, padding: 14, border: "1px solid #DBEAFE" }}>
-            <p style={{ margin: 0, fontSize: 12, color: "#1E40AF", fontWeight: 700 }}>Students</p>
-            <p style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 800, color: "#1D4ED8" }}>{totals.students}</p>
-          </div>
-          <div style={{ background: "#F5F3FF", borderRadius: 12, padding: 14, border: "1px solid #EDE9FE" }}>
-            <p style={{ margin: 0, fontSize: 12, color: "#6D28D9", fontWeight: 700 }}>Technicians</p>
-            <p style={{ margin: "4px 0 0", fontSize: 22, fontWeight: 800, color: "#7C3AED" }}>{totals.technicians}</p>
-          </div>
-        </div>
       </div>
     </div>
   );

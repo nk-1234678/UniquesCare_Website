@@ -13,7 +13,7 @@ const PRIORITIES = ["Low", "Medium", "High"];
 const STATUS_STYLE = {
   "Resolved":    { bg: "#EDFAF3", color: "#16A34A" },
   "In Progress": { bg: "#FFF8EB", color: "#D97706" },
-  "Pending":     { bg: "#FFF0F0", color: "#DC2626" },
+  "Submitted":   { bg: "#FFF0F0", color: "#DC2626" },
 };
 
 const PRIORITY_STYLE = {
@@ -48,7 +48,7 @@ const formatTime = (value) => {
 const normalizeComplaint = (complaint) => ({
   ...complaint,
   id: complaint._id ?? complaint.id,
-  status: complaint.status ?? "Pending",
+  status: complaint.status ?? "Submitted",
   priority: complaint.priority ?? "Medium",
   date: complaint.date ?? formatDate(complaint.createdAt),
   time: complaint.time ?? formatTime(complaint.createdAt),
@@ -250,7 +250,7 @@ const RaiseComplaintPage = () => {
 
   const counts = {
     total:      complaints.length,
-    pending:    complaints.filter(c => c.status === "Pending").length,
+    submitted:  complaints.filter(c => c.status === "Submitted").length,
     inProgress: complaints.filter(c => c.status === "In Progress").length,
     resolved:   complaints.filter(c => c.status === "Resolved").length,
   };
@@ -461,7 +461,7 @@ const RaiseComplaintPage = () => {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
         {[
           { label: "Total",       value: counts.total,      color: isStudent ? "#4F7FFA" : "#1D4ED8", bg: isStudent ? "#EEF3FF" : "#EAF2FF", icon: "📋" },
-          { label: "Pending",     value: counts.pending,    color: isStudent ? "#DC2626" : "#B45309", bg: isStudent ? "#FFF0F0" : "#FFF7ED", icon: "⏳" },
+          { label: "Submitted",   value: counts.submitted,  color: isStudent ? "#DC2626" : "#B45309", bg: isStudent ? "#FFF0F0" : "#FFF7ED", icon: "⏳" },
           { label: "In Progress", value: counts.inProgress, color: isStudent ? "#D97706" : "#7C3AED", bg: isStudent ? "#FFF8EB" : "#F5F3FF", icon: "🔄" },
           { label: "Resolved",    value: counts.resolved,   color: isStudent ? "#16A34A" : "#059669", bg: isStudent ? "#EDFAF3" : "#ECFDF5", icon: "✅" },
         ].map((s, i) => (
@@ -499,7 +499,7 @@ const RaiseComplaintPage = () => {
 
         {/* Status filter */}
         <div style={{ display: "flex", gap: 6 }}>
-          {["All", "Pending", "In Progress", "Resolved"].map(s => (
+          {["All", "Submitted", "Under Review", "In Progress", "Resolved"].map(s => (
             <button key={s} className="filter-btn" onClick={() => setFilterStatus(s)} style={{
               padding: "7px 14px", borderRadius: 99, border: "1.5px solid",
               borderColor: filterStatus === s ? (isStudent ? "#C0272D" : "#111827") : (isStudent ? "#E5E5E5" : "#E5E7EB"),
@@ -644,9 +644,8 @@ const RaiseComplaintPage = () => {
                   {/* Timeline indicator */}
                   <div style={{ display: "flex", gap: 8, marginTop: 16, alignItems: "center" }}>
                     {["Submitted", "Under Review", "In Progress", "Resolved"].map((step, idx) => {
-                      const stepIndex = ["Submitted","Under Review","In Progress","Resolved"].indexOf(
-                        c.status === "Pending" ? "Submitted" : c.status === "In Progress" ? "In Progress" : "Resolved"
-                      );
+                      const statusForIndex = (c.status === "Pending" ? "Submitted" : c.status) || "Submitted";
+                      const stepIndex = ["Submitted","Under Review","In Progress","Resolved"].indexOf(statusForIndex);
                       const active = idx <= stepIndex;
                       return (
                         <React.Fragment key={step}>

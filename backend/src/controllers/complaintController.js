@@ -179,7 +179,7 @@ export const updateComplaint = asyncHandler(async (req, res) => {
     return sendError(res, 400, `Status can only move forward from ${prev.status}`);
   }
 
-  if (!isPrivilegedRole(userRole) && !["open", "submitted"].includes(prev.status)) {
+  if (!isPrivilegedRole(userRole) && prev.status !== "Submitted") {
     return sendError(res, 403, "Complaint cannot be edited once it is being processed");
   }
 
@@ -226,7 +226,7 @@ export const deleteComplaint = asyncHandler(async (req, res) => {
 
   if (!existingComplaint) return sendError(res, 404, "Complaint not found");
 
-  if (!isPrivilegedRole(userRole) && !["open", "submitted"].includes(existingComplaint.status)) {
+  if (!isPrivilegedRole(userRole) && existingComplaint.status !== "Submitted") {
     return sendError(res, 403, "Complaint cannot be deleted once it is being processed");
   }
 

@@ -18,7 +18,7 @@ export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export const STATUS_COLORS = {
   Resolved: "#22C55E",
   "In Progress": "#F59E0B",
-  Pending: "#EF4444",
+  Submitted: "#EF4444",
 };
 
 export const formatDate = (value) => {
@@ -34,7 +34,7 @@ export const statusStyle = (status) => {
   const map = {
     Resolved: { bg: "#EDFAF3", color: "#16A34A" },
     "In Progress": { bg: "#FFF8EB", color: "#D97706" },
-    Pending: { bg: "#FFF0F0", color: "#DC2626" },
+    Submitted: { bg: "#FFF0F0", color: "#DC2626" },
   };
 
   return map[status] || { bg: "#F5F5F5", color: "#666" };
@@ -99,7 +99,7 @@ export const calculateStats = (complaints, users) => {
   return {
     totalComplaints: complaints.length,
     resolvedComplaints: complaints.filter((c) => c.status === "Resolved").length,
-    pendingComplaints: complaints.filter((c) => c.status === "Pending").length,
+    pendingComplaints: complaints.filter((c) => c.status === "Submitted").length,
     inProgressComplaints: complaints.filter((c) => c.status === "In Progress").length,
     totalStudents: users.filter((u) => u.role === "student").length,
     totalTechnicians: users.filter((u) => u.role === "technician").length,

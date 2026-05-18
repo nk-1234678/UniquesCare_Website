@@ -24,11 +24,15 @@ export const requireAuth = async (req, res, next) => {
     }
 
     const user = await User.findById(decoded.id)
-      .select("_id name email role")
+      .select("_id name email role isActive")
       .lean();
 
     if (!user) {
       return sendError(res, 401, "User no longer exists");
+    }
+
+    if (user.isActive === false) {
+      return sendError(res, 403, "Account blocked");
     }
 
     req.user = user;

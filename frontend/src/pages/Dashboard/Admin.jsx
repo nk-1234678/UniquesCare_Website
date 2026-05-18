@@ -60,41 +60,41 @@ const AdminDashboard = () => {
   const totalStudents = users.filter((u) => u.role === "student").length;
   const totalTechnicians = users.filter((u) => u.role === "technician").length;
   const totalComplaints = complaints.length;
-  const pendingComplaints = complaints.filter((c) => c.status === "Pending").length;
+  const pendingComplaints = complaints.filter((c) => c.status === "Submitted").length;
 
   const dashboardStats = [
     {
       label: "Total Students",
       value: totalStudents,
       icon: "👥",
-      color: "#3B82F6",
-      bg: "#EFF6FF",
+      color: "#B91C1C",
+      bg: "#FFF5F5",
     },
     {
       label: "Total Technicians",
       value: totalTechnicians,
       icon: "🔧",
-      color: "#8B5CF6",
-      bg: "#F5F3FF",
+      color: "#B91C1C",
+      bg: "#FFF5F5",
     },
     {
       label: "Total Complaints",
       value: totalComplaints,
       icon: "📋",
-      color: "#EC4899",
-      bg: "#FFF5F7",
+      color: "#B91C1C",
+      bg: "#FFF1F2",
     },
     {
-      label: "Pending Complaints",
+      label: "Submitted Complaints",
       value: pendingComplaints,
       icon: "⏳",
-      color: "#F59E0B",
-      bg: "#FFFBEB",
+      color: "#B91C1C",
+      bg: "#FEF2F2",
     },
   ];
 
   return (
-    <div style={{ padding: "24px", background: "#F9FAFB", minHeight: "100vh" }}>
+    <div style={{ minHeight: "100vh" }}>
       <style>{`
         @keyframes fadeUp {
           from {
@@ -110,10 +110,11 @@ const AdminDashboard = () => {
 
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: "#111" }}>
+        <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: "#B91C1C" }}>
           Admin Dashboard
         </h1>
-        <p style={{ margin: "4px 0 0", fontSize: 14, color: "#666" }}>
+        
+          <p style={{ margin: "4px 0 0", fontSize: 14, color: "#6B7280" }}>
           Welcome back! Here's what's happening with your complaints system today.
         </p>
       </div>
@@ -123,11 +124,11 @@ const AdminDashboard = () => {
 
       {/* Charts Section */}
       <div style={{ marginBottom: 28 }}>
-        <ComplaintCharts complaints={complaints} />
+        <ComplaintCharts complaints={complaints} users={users} />
       </div>
 
       {/* Tables Section */}
-      <UserAnalyticsCharts users={users} />
+      <UserAnalyticsCharts users={users} complaints={complaints} />
     </div>
   );
 };

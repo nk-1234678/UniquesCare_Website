@@ -1,4 +1,4 @@
-export const COMPLAINT_STATUS_ORDER = ["Pending", "In Progress", "Resolved"];
+export const COMPLAINT_STATUS_ORDER = ["Submitted", "Under Review", "In Progress", "Resolved"];
 
 export const getStatusIndex = (status) => COMPLAINT_STATUS_ORDER.indexOf(status);
 

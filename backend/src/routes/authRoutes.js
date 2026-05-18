@@ -8,6 +8,7 @@ import { getUsers } from "../controllers/authControllers.js";
 import { getStudents } from "../controllers/authControllers.js";
 import { getTechnicians } from "../controllers/authControllers.js";
 import { getStudentDetail } from "../controllers/authControllers.js";
+import { blockStudent } from "../controllers/authControllers.js";
 import { getTechnicianDetail } from "../controllers/authControllers.js";
 import { refreshAccessToken } from "../controllers/authControllers.js";
 import { authorizeRoles, requireAuth } from "../middlewares/authMiddleware.js";
@@ -38,6 +39,9 @@ router.get("/users", requireAuth, authorizeRoles("admin"), getUsers);
 router.get("/students", requireAuth, authorizeRoles("admin"), getStudents);
 router.get("/technicians", requireAuth, authorizeRoles("admin"), getTechnicians);
 router.get("/students/:id", requireAuth, authorizeRoles("admin"), getStudentDetail);
+router.put("/students/:id/block", requireAuth, authorizeRoles("admin"), blockStudent);
+// Allow blocking technicians via same controller
+router.put("/technicians/:id/block", requireAuth, authorizeRoles("admin"), blockStudent);
 router.get("/technicians/:id", requireAuth, authorizeRoles("admin"), getTechnicianDetail);
 
 export default router;

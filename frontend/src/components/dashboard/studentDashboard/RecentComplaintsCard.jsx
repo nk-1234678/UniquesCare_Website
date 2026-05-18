@@ -15,8 +15,8 @@ const RecentComplaintsCard = ({ recentComplaints, loading, error }) => {
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Recent Complaints</h3>
-          <p style={{ margin: "2px 0 0", fontSize: 12, color: "#999" }}>Your latest 5 backend submissions</p>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#B91C1C" }}>Recent Complaints</h3>
+          <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6B7280" }}>Your latest 5 backend submissions</p>
         </div>
         <button
           style={{
@@ -27,7 +27,7 @@ const RecentComplaintsCard = ({ recentComplaints, loading, error }) => {
             fontSize: 13,
             fontWeight: 600,
             cursor: "pointer",
-            color: "#C0272D",
+            color: "#B91C1C",
           }}
         >
           View All →
@@ -69,8 +69,8 @@ const RecentComplaintsCard = ({ recentComplaints, loading, error }) => {
                     fontWeight: 600,
                     padding: "3px 10px",
                     borderRadius: 6,
-                    background: "#F5F5F5",
-                    color: "#555",
+                    background: "#FFF5F5",
+                    color: "#B91C1C",
                   }}
                 >
                   {complaint.category}

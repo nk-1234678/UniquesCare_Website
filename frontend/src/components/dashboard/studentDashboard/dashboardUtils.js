@@ -5,7 +5,7 @@ export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "
 export const STATUS_COLORS = {
   Resolved: "#22C55E",
   "In Progress": "#F59E0B",
-  Pending: "#EF4444",
+  Submitted: "#EF4444",
 };
 
 export const formatComplaintId = (complaint, index) => {
@@ -47,7 +47,7 @@ export const buildRecentComplaints = (items) =>
       id: formatComplaintId(item, index),
       title: item.title,
       category: item.category,
-      status: item.status || "Pending",
+      status: item.status || "Submitted",
       date: formatDate(item.createdAt),
     }));
 
@@ -55,7 +55,7 @@ export const statusStyle = (status) => {
   const map = {
     Resolved: { bg: "#EDFAF3", color: "#16A34A" },
     "In Progress": { bg: "#FFF8EB", color: "#D97706" },
-    Pending: { bg: "#FFF0F0", color: "#DC2626" },
+    Submitted: { bg: "#FFF0F0", color: "#DC2626" },
   };
 
   return map[status] || {};
